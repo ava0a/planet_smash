@@ -46,9 +46,9 @@
 				alert("Loading, please wait up to 30 seconds.");
 				this.bindEvents();
 				//false device ready send for web testing =============================================
-				//setTimeout(function(){
-				//	app.receivedEvent('deviceready');
-				//}, 1000);
+				setTimeout(function(){
+					app.receivedEvent('deviceready');
+				}, 100);
 				//remove for actual app ===============================================================
 			},
 			// Bind Event Listeners
@@ -58,7 +58,7 @@
 			bindEvents: function() {
 				alert("listening");
 				document.addEventListener("deviceready", function(){
-															  alert("recieved");
+															  alert("recieved event: deviceready");
 															  app.receivedEvent('deviceready');
 														 },
 				 true);
