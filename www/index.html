@@ -151,6 +151,7 @@
 			var sunDivHasReset = new Array();
 			
 			var speedAspect=0.000375;
+			var sizeAspect=0.001875;
 			
 			var smallerSide;
 			if(canvas.height>canvas.width){
@@ -211,7 +212,7 @@
 				xG:0,
 				yG:0,
 				mass:100,
-				engine: 0.000375*smallerAspect,
+				engine: speedAspect*smallerAspect*3,
 				exists: true
 			};
 
@@ -245,7 +246,7 @@
 					}
 					
 					if (sunReady&&spaceship.exists){
-						ctx.drawImage(sunImage, spaceship.x, spaceship.y, spaceship.mass+50, spaceship.mass+50);
+						ctx.drawImage(sunImage, spaceship.x, spaceship.y, spaceship.mass*smallerSide*sizeAspect, spaceship.mass*smallerSide*sizeAspect);
 					}
 					
 					//clipped planet drawing
@@ -1037,7 +1038,7 @@
 					xG:0,
 					yG:0,
 					mass:100,
-					engine: smallerSide*speedAspect,
+					engine: speedAspect*smallerAspect*3,
 					exists: true
 				};
 				//sun-planet spawn protection
