@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Planet Smash</title>
+		<meta name="format-detection" content="telephone=no">
+        <meta name="msapplication-tap-highlight" content="no">
+        <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width">
+		<script src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
+	</head>
+	
+	<body>
+	
+		<style type="text/css">
+			*
+			{
+				border: 0px;
+				margin: 0px;
+				padding: 0px;
+			}
+		</style>
+		
+		<script>
+		//divs
+		var maxDeaths=100;
+		$(document).ready(function(){
+			for(i = 0; i < maxDeaths; i++) {
+				$('body').append('<div style="position: absolute; font-family: Impact, Charcoal, sans-serif; font-size:11pt; " id="sun'+ i +'" />');
+			}
+			document.documentElement.style.overflow = 'hidden';  // firefox, chrome
+			document.body.scroll = "no"; // ie only
+		});
+		</script>
+		
+		<div  style="position: absolute; font-family: Impact, Charcoal, sans-serif; font-size:11pt; " id="smallest"></div>
+		<div  style="position: absolute; font-family: Impact, Charcoal, sans-serif; font-size:11pt; " id="largest"></div>
+		<div type="button" style="position: absolute; font-family: Times New Roman, Times, serif; " id="play"></div>
+		<div type="button" style="position: absolute; font-family: Times New Roman, Times, serif; " id="cust"></div>
+		<div type="button" style="position: absolute; font-family: Times New Roman, Times, serif; " id="cred"></div>
+		<div style="position: absolute; font-family: Impact, Charcoal, sans-serif;" id="score"></div>
+		<div style="position: absolute; font-family: Impact, Charcoal, sans-serif;" id="level"></div>
+		
+		<script>
+		var app = {
+			// Application Constructor
+			initialize: function() {
+				alert("Loading, please wait up to 30 seconds.");
+				this.bindEvents();
+				//false device ready send for web testing =============================================
+				//setTimeout(function(){
+				//	app.receivedEvent('deviceready');
+				//}, 1000);
+				//remove for actual app ===============================================================
+			},
+			// Bind Event Listeners
+			//
+			// Bind any events that are required on startup. Common events are:
+			// 'load', 'deviceready', 'offline', and 'online'.
+			bindEvents: function() {
+				alert("listening");
+				document.addEventListener("deviceready", function(){
+															  alert("recieved");
+															  app.receivedEvent('deviceready');
+														 },
+				 true);
+			},
+			// deviceready Event Handler
+			//
+			// The scope of 'this' is the event. In order to call the 'receivedEvent'
+			// function, we must explicitly call 'app.receivedEvent(...);'
+			
+			// Update DOM on a Received Event
+			receivedEvent: function(id) {
+				var parentElement = document.getElementById(id);
+
+				console.log('Received Event: ' + id);
+				
+				play();
+			}
+		};
+		
+		//begin construction
+		app.initialize();
+		
+		//play game once device is ready
+		var play=function(){
+
+			//interface variables
+			var canvas = document.createElement("canvas");
+			canvas.height = $(document).height();
+			canvas.width = $(document).width();
+			document.body.appendChild(canvas);
+
+			var ctx = canvas.getContext("2d");
+					
+			//screen bools
+			var starting=true;
+			var credScreen=false;	
+			var playing=false;
+			var gameOver=false;
+					
+			//buttons
+				//play button
+			var play=document.getElementById('play');
+			var playOver=false;
+			var colorTick=0;
+			var colorVar;
+			var colorPlay=function(){
+				if(colorTick%18<=3){
+					play.style.color="red";
+				}
+				else if(colorTick%18<=6){
+					play.style.color="purple";
+				}
+				else if(colorTick%18<=9){
+					play.style.color="blue";
+				}
+				else if(colorTick%18<=12){
+					play.style.color="green";
+				}
+				else if(colorTick%18<=15){
+					play.style.color="yellow";
+				}
+				else{
+					play.style.color="orange";
+				}
+				colorTick++;
+			}
+				//customize button
+			var cust=document.getElementById('cust');
+			var custOver=false;
+				//credits button
+			var cred=document.getElementById('cred');
+			var credOver=false;
+					
+			//globals
+			var level=1;
+			var nPlanets=level+1;
+			var nBackgrounds=2;
+			var score=0;
+			var deaths=0;
+			var justDied=true;
+			var topper=0;
+			var finalScore=0;
+			var nPlanetPics=7;
+			var resetBuffer = 150;
+			var newTouch=false;
+			var mouseX=-1;
+			var mouseY=-1;
+
+			var sunDiv = new Array();
+			var sunDivHasReset = new Array();
+
+			//load bg images
+			var backgroundImage = new Array();
+			for(var i=0; i<nBackgrounds; i++){
+				backgroundImage[i]=new Image();
+				backgroundImage[i].src = "background0"+i+".jpg";
+			}
+			var backgroundReady = false;
+
+			//load sun image
+			var sunImage = new Image();
+			sunImage.src = "sun.png";
+			var sunReady = false;
+
+			var planetA = new Array();
+
+			var planetSize = 50;
+			var planetMulti = 20;
+			var planetVisual=.42;
+
+			//planet array definition
+			for(i=0; i<nPlanets; i++){
+				planetA[i]={
+					xG: 0,
+					yG: 0,
+					xVelocity: (Math.random()*7)-3,
+					yVelocity: (Math.random()*7)-3,
+					x: Math.random()*(canvas.width-planetSize)*.97,
+					y: Math.random()*(canvas.height-planetSize)*.97,
+					mass: Math.floor(Math.random()*planetMulti*(i%5)+planetSize),
+					exists: true,
+					imgID : Math.floor((Math.random()*nPlanetPics*101)%nPlanetPics)
+				};
+			}
+
+			var smallerAspect;
+			if(canvas.height>canvas.width){
+				smallerAspect=canvas.width;
+			}
+			else{
+				smallerAspect=canvas.height;
+			}
+			
+			//spaceship definition
+			var spaceship = {
+				x: (canvas.width*.5)-(100*.5),
+				y: (canvas.height*.5)-(100*.5),
+				xVelocity:0,
+				yVelocity:0,
+				xG:0,
+				yG:0,
+				mass:100,
+				engine: 0.000375*smallerAspect,
+				exists: true
+			};
+
+			//load planet images
+			var planetImages = new Array();
+			for(var i=0; i<nPlanetPics; i++){	
+				planetImages[i] = new Image();
+				planetImages[i].src = "planet0" + i + ".png";
+			}
+			var AplanetReady = false;
+				
+			//load credit background
+			var credBG = new Image();
+			credBG.src="creditbg.jpg";
+				
+			backgroundImage[nBackgrounds-1].onload = function(){		backgroundReady=true;	};
+			sunImage.onload = function(){				sunReady=true;	};
+			planetImages[nPlanetPics-1].onload = function(){			AplanetsReady=true;	};
+
+			var events = {};
+
+			document.addEventListener("keydown", function(e){events[e.keyCode] =true;}, false);
+			document.addEventListener("keyup", function(e){delete events[e.keyCode]}, false);
+
+			
+			var render = function(){
+				//--------play-screen-------------
+				if(playing){
+					if (backgroundReady){
+						ctx.drawImage(backgroundImage[1], 0, 0, canvas.width, canvas.height);
+					}
+					
+					if (sunReady&&spaceship.exists){
+						ctx.drawImage(sunImage, spaceship.x, spaceship.y, spaceship.mass+50, spaceship.mass+50);
+					}
+					
+					//clipped planet drawing
+					if (AplanetsReady){
+						for(var i=0; i<nPlanets; i++){
+							if(planetA[i].x<=0){
+								planetA[i].x=0;
+								planetA[i].xVelocity*=-1;
+							}
+							if(planetA[i].x+planetA[i].mass*planetVisual>=canvas.width){
+								planetA[i].x=canvas.width-planetA[i].mass*planetVisual;
+								planetA[i].xVelocity*=-1;
+							}
+							if(planetA[i].y<=0){
+								planetA[i].y=0;
+								planetA[i].yVelocity*=-1;
+							}
+							if(planetA[i].y+planetA[i].mass*planetVisual>=canvas.height){
+								planetA[i].y=canvas.height-planetA[i].mass*planetVisual;
+								planetA[i].yVelocity*=-1;
+							}
+							ctx.drawImage(planetImages[planetA[i].imgID], planetA[i].x, planetA[i].y, planetA[i].mass*planetVisual, planetA[i].mass*planetVisual);
+						}
+					}
+					
+					//sun engine controls for android
+					document.addEventListener('touchstart',onTouch, false);
+					document.addEventListener('touchmove', function(e) {
+						// Cancel default scrolling from touchmove
+						e.preventDefault();
+					}, false);
+					document.addEventListener('touchend',offTouch, false);
+					
+					function onTouch(event){
+						var touch = event.touches[0];
+						mouseX = touch.clientX;
+						mouseY = touch.clientY;
+						if(gameOver&&topper==canvas.height*.35){
+							newTouch=true;
+						}
+					}
+					function offTouch(){
+						mouseX = -1;
+						mouseY = -1;
+					}
+					
+					if(mouseX!=-1 && mouseY!=-1){
+						if(mouseX<spaceship.x+(spaceship.mass/2)+25){
+							spaceship.xVelocity-=spaceship.engine;
+						}
+						if(mouseX>spaceship.x+(spaceship.mass/2)+25){
+							spaceship.xVelocity+=spaceship.engine;
+						}
+						if(mouseY<spaceship.y+(spaceship.mass/2)+25){
+							spaceship.yVelocity-=spaceship.engine;
+						}
+						if(mouseY>spaceship.y+(spaceship.mass/2)+25){
+							spaceship.yVelocity+=spaceship.engine;
+						}
+					}
+					
+					if(65 in events || 37 in events){
+						spaceship.xVelocity-=spaceship.engine;
+					}
+					if(87 in events||38 in events){
+						spaceship.yVelocity-=spaceship.engine;
+					}
+					if(68 in events||39 in events){
+						spaceship.xVelocity+=spaceship.engine;
+					}
+					if(83 in events||40 in events){
+						spaceship.yVelocity+=spaceship.engine;
+					}
+					
+					//sun-acceleration-clipping
+					if(spaceship.x+spaceship.mass*.55<=0){
+						spaceship.xG=1;
+					}
+					if(spaceship.x+spaceship.mass*.85>=canvas.width){
+						spaceship.xG=-1;
+					}
+					if(spaceship.y+spaceship.mass*.45<=0){
+						spaceship.yG=1;
+					}
+					if(spaceship.y+spaceship.mass*.85>=canvas.height){
+						spaceship.yG=-1;
+					}
+					
+					//planet movement
+					for(var i=0; i<nPlanets; i++){
+						planetA[i].x += planetA[i].xVelocity;
+						planetA[i].y += planetA[i].yVelocity;
+					}
+					
+					//gravitational physics
+						//sun-planet gravity
+					for(var i=0; i<nPlanets; i++){
+						var xDist=(spaceship.x+spaceship.mass*.625)-(planetA[i].x+planetA[i].mass*planetVisual*.5);
+						var yDist=(spaceship.y+spaceship.mass*.625)-(planetA[i].y+planetA[i].mass*planetVisual*.5);
+						
+						var biggerMass;
+						if(planetA[i].mass>spaceship.mass){
+							biggerMass=planetA[i].mass;
+						}
+						else{
+							biggerMass=spaceship.mass;
+						}
+						
+						if( (xDist < biggerMass * 2 && xDist > 0) && ((yDist < biggerMass && yDist > 0)||(yDist > biggerMass * -1 && yDist < 0)) ){
+							if(planetA[i].mass<spaceship.mass){
+								planetA[i].xG=(spaceship.mass/(planetA[i].mass)*.098);
+							}
+							else if(planetA[i].mass>spaceship.mass){
+								spaceship.xG=((planetA[i].mass)/(spaceship.mass)*-.05);
+							}
+						}
+						else if(xDist > biggerMass * -2 && xDist < 0 && ((yDist < biggerMass && yDist > 0)||(yDist > biggerMass * -1 && yDist < 0)) ){
+							if(planetA[i].mass<spaceship.mass){
+								planetA[i].xG=(spaceship.mass/(planetA[i].mass)*-.098);
+							}
+							else if(planetA[i].mass>spaceship.mass){
+								spaceship.xG=((planetA[i].mass)/(spaceship.mass)*.05);
+							}
+						}
+						else{
+							planetA[i].xG=0;
+						};
+						
+						if(yDist < biggerMass * 1.5 && yDist > 0 && ((xDist < biggerMass && xDist > 0)||(xDist > biggerMass * -1 && xDist < 0)) ){
+							if(planetA[i].mass<spaceship.mass){
+								planetA[i].yG=(spaceship.mass/(planetA[i].mass)*.098);
+							}
+							else if(planetA[i].mass>spaceship.mass){
+								spaceship.yG=((planetA[i].mass)/(spaceship.mass)*-.05);
+							}
+						}
+						else if(yDist > biggerMass * -1.5 && yDist < 0 && ((xDist < biggerMass && xDist > 0)||(xDist > biggerMass * -1 && xDist < 0)) ){
+							if(planetA[i].mass<spaceship.mass){
+								planetA[i].yG=(spaceship.mass/(planetA[i].mass)*-.098);
+							}
+							else if(planetA[i].mass>spaceship.mass){
+								spaceship.yG=((planetA[i].mass)/(spaceship.mass)*.05);
+							}
+						}
+						else{
+							planetA[i].yG=0;
+						};
+						
+						planetA[i].xVelocity += planetA[i].xG;
+						planetA[i].yVelocity += planetA[i].yG;
+					}
+						//planet-planet gravity
+					for(var a=0; a<nPlanets; a++){
+						for(var b=0; b<nPlanets; b++){
+							var xDist=(planetA[a].x+planetA[a].mass*planetVisual*.5)-(planetA[b].x+planetA[b].mass*planetVisual*.5);
+							var yDist=(planetA[a].y+planetA[a].mass*planetVisual*.5)-(planetA[b].y+planetA[b].mass*planetVisual*.5);
+							
+							var biggerMass;
+							if(planetA[a].mass>planetA[b].mass){
+								biggerMass=planetA[a].mass;
+							}
+							else{
+								biggerMass=planetA[b].mass;
+							}
+							
+							if( (xDist < biggerMass * 2 && xDist > 0) && ((yDist < biggerMass && yDist > 0)||(yDist > biggerMass * -1 && yDist < 0)) ){
+								if(planetA[a].mass<planetA[b].mass){
+									planetA[a].xG=(planetA[b].mass/(planetA[a].mass)*-.05);
+								}
+								else if(planetA[a].mass>planetA[b].mass){
+									planetA[b].xG=((planetA[a].mass)/(planetA[b].mass)*.05);
+								}
+							}
+							else if(xDist > biggerMass * -2 && xDist < 0 && ((yDist < biggerMass && yDist > 0)||(yDist > biggerMass * -1 && yDist < 0)) ){
+								if(planetA[a].mass<planetA[b].mass){
+									planetA[a].xG=(planetA[b].mass/(planetA[a].mass)*.05);
+								}
+								else if(planetA[a].mass>planetA[b].mass){
+									planetA[b].xG=((planetA[a].mass)/(planetA[b].mass)*-.05);
+								}
+							}
+							else{
+								planetA[a].xG=0;
+								planetA[b].xG=0;
+							};
+							
+							if(yDist < biggerMass * 1.5 && yDist > 0 && ((xDist < biggerMass && xDist > 0)||(xDist > biggerMass * -1 && xDist < 0)) ){
+								if(planetA[a].mass<planetA[b].mass){
+									planetA[a].yG=(planetA[b].mass/(planetA[a].mass)*-.05);
+								}
+								else if(planetA[a].mass>planetA[b].mass){
+									planetA[b].yG=((planetA[a].mass)/(planetA[b].mass)*.05);
+								}
+							}
+							else if(yDist > biggerMass * -1.5 && yDist < 0 && ((xDist < biggerMass && xDist > 0)||(xDist > biggerMass * -1 && xDist < 0)) ){
+								if(planetA[a].mass<planetA[b].mass){
+									planetA[a].yG=(planetA[b].mass/(planetA[a].mass)*.05);
+								}
+								else if(planetA[a].mass>planetA[b].mass){
+									planetA[b].yG=((planetA[a].mass)/(planetA[b].mass)*-.05);
+								}
+							}
+							else{
+								planetA[a].yG=0;
+								planetA[b].yG=0;
+							};
+							
+							planetA[a].xVelocity += planetA[a].xG;
+							planetA[a].yVelocity += planetA[a].yG;
+							planetA[b].xVelocity += planetA[b].xG;
+							planetA[b].yVelocity += planetA[b].yG;
+						}
+					}
+					
+					//sun movement
+					spaceship.xVelocity+=spaceship.xG;
+					spaceship.yVelocity+=spaceship.yG;
+					
+					var sunSpeedCap = 25;
+					var friction=.03;
+					
+					if(spaceship.xVelocity>=sunSpeedCap){
+						spaceship.xVelocity=sunSpeedCap;
+					}
+					if(spaceship.yVelocity>=sunSpeedCap){
+						spaceship.yVelocity=sunSpeedCap;
+					}
+					if(spaceship.xVelocity<=-sunSpeedCap){
+						spaceship.xVelocity=-sunSpeedCap;
+					}
+					if(spaceship.yVelocity<=-sunSpeedCap){
+						spaceship.yVelocity=-sunSpeedCap;
+					}
+					
+					if(spaceship.xVelocity>0){
+						spaceship.xVelocity-=friction;
+					}
+					if(spaceship.yVelocity>0){
+						spaceship.yVelocity-=friction;
+					}
+					if(spaceship.xVelocity<0){
+						spaceship.xVelocity+=friction;
+					}
+					if(spaceship.yVelocity<0){
+						spaceship.yVelocity+=friction;
+					}
+					
+					spaceship.x+=spaceship.xVelocity;
+					spaceship.y+=spaceship.yVelocity;
+					
+					spaceship.xG=0;
+					spaceship.yG=0;
+					
+					//mass text output
+					var leastGas=0;
+					for(var i=0; i<nPlanets-1; i++){
+						if(planetA[leastGas].mass>planetA[i+1].mass && planetA[i+1].exists || !planetA[leastGas].exists){
+							leastGas=i+1;
+						}
+					}
+
+					var mostGas=0;
+					for(var i=0; i<nPlanets-1; i++){
+						if(planetA[mostGas].mass<=planetA[i+1].mass && planetA[i+1].exists || !planetA[mostGas].exists){
+							mostGas=i+1;
+						}
+					}
+					
+					sunDiv[deaths]=document.getElementById("sun"+deaths);
+					if(justDied==true){
+						sunDivHasReset[deaths]=false;
+						justDied=false;
+					}
+					if(spaceship.exists){
+						sunDiv[deaths].innerHTML=spaceship.mass;
+						sunDiv[deaths].style.left = (spaceship.x+(spaceship.mass)/1.5)+'px';
+						sunDiv[deaths].style.top = (spaceship.y+spaceship.mass/3)+'px';
+						sunDiv[deaths].style.color="red";
+					}
+					sunDivHasReset[deaths]=false;
+					
+					var smallDiv = document.getElementById('smallest');
+					if(leastGas!=mostGas){
+						smallDiv.innerHTML=planetA[leastGas].mass;
+						smallDiv.style.left = planetA[leastGas].x+(planetA[leastGas].mass*planetVisual)+'px';
+						smallDiv.style.top = planetA[leastGas].y+'px';
+						smallDiv.style.color="white";
+					}
+					else{
+						smallDiv.innerHTML=planetA[mostGas].mass;
+						smallDiv.style.left = planetA[mostGas].x+(planetA[leastGas].mass*planetVisual)+'px';
+						smallDiv.style.top = planetA[mostGas].y+'px';
+						smallDiv.style.color="orange";
+					}
+					
+					var largeDiv = document.getElementById('largest');
+						largeDiv.innerHTML=planetA[mostGas].mass;
+						largeDiv.style.left = planetA[mostGas].x+(planetA[leastGas].mass*planetVisual)+'px';
+						largeDiv.style.top = planetA[mostGas].y+'px';
+						largeDiv.style.color="orange";
+					
+					//planet-planet collision
+					for(var a=0; a<nPlanets; a++){
+						for(var b=0; b<nPlanets; b++)
+						{
+							if(a!=b){
+								if(planetA[a].x<=planetA[b].x+planetA[b].mass*planetVisual &&
+									planetA[a].x+planetA[a].mass*planetVisual>=planetA[b].x &&
+									planetA[a].y<=planetA[b].y+planetA[b].mass*planetVisual &&
+									planetA[a].y+planetA[a].mass*planetVisual>=planetA[b].y)
+								{
+									if (planetA[a].mass<=planetA[b].mass && planetA[a].exists)
+									{
+										planetA[a].mass-=3;
+										planetA[b].mass+=1;
+										planetA[b].x-=.5;
+										planetA[b].y-=.5;
+									}
+									if (planetA[b].mass<=planetA[a].mass && planetA[b].exists)
+									{
+										planetA[a].mass+=1;
+										planetA[b].mass-=3;
+										planetA[a].x-=.5;
+										planetA[a].y-=.5;
+									}
+									if (planetA[a].mass<=0 && planetA[a].exists)
+									{
+										planetA[a].mass=0;
+										planetA[a].exists=false;
+									}
+									if (planetA[b].mass<=0 && planetA[b].exists)
+									{
+										planetA[b].mass=0;
+										planetA[b].exists=false;
+									}
+								}
+							}
+						}
+					}
+						
+					//sun-planet collision
+					for(var i=0; i<nPlanets; i++){
+						if(planetA[i].x<=spaceship.x+(spaceship.mass*.9) &&
+							planetA[i].x+planetA[i].mass*planetVisual>=spaceship.x+(spaceship.mass*.55)&&
+							planetA[i].y<=spaceship.y+(spaceship.mass*.9) &&
+							planetA[i].y+planetA[i].mass*planetVisual>=spaceship.y+spaceship.mass*.45)
+							{
+								if (planetA[i].mass<=spaceship.mass && planetA[i].exists)
+								{
+									planetA[i].mass-=3;
+									spaceship.mass+=3;
+									score+=3;
+									spaceship.x-=1;
+									spaceship.y-=1;
+									sunDiv[deaths].style.color="#44D75C";
+								}
+								if (planetA[i].mass>=spaceship.mass && spaceship.exists)
+								{
+									planetA[i].mass+=1;
+									spaceship.mass-=1;
+									planetA[i].x-=.5;
+									planetA[i].y-=.5;
+									sunDiv[deaths].style.color="#FDF44A";
+								}
+								if (planetA[i].mass<=0 && planetA[i].exists)
+								{
+									planetA[i].mass=0;
+									planetA[i].exists=false;
+								}
+								if (spaceship.mass<=0 && spaceship.exists)
+								{
+									spaceship.mass=0;
+									spaceship.exists=false;
+								}
+							}
+					}
+					
+					//score div
+					var scoreDiv = document.getElementById("score");
+					scoreDiv.innerHTML="Gas Absorbed:<br>"+score;
+					scoreDiv.style.left=canvas.width*.5 + 'px';
+					scoreDiv.style.top=15 + 'px';
+					scoreDiv.style.color="lightblue";
+					scoreDiv.style.fontSize="20pt";
+					
+					var levelDiv = document.getElementById("level");
+					levelDiv.innerHTML="Level "+level;
+					levelDiv.style.left=canvas.width*.9 + 'px';
+					levelDiv.style.top=15 + 'px';
+					levelDiv.style.color="lightblue";
+					levelDiv.style.fontSize="14pt";
+					
+					//level-win
+					noPlanets=true;
+					for(var i=0; i<nPlanets; i++){
+						if(planetA[i].exists)
+						{
+							noPlanets=false;
+						}
+					}
+					if(noPlanets){
+						finalScore=score*level;
+						level++;
+						reset(level);
+					}
+					
+					//level-lose
+					if(!spaceship.exists){
+						finalScore=score*level;
+						gameOver=true;
+						playing=false;
+						deaths+=1;
+					}
+					
+				}	
+				//--------start-screen------------
+				if(starting){
+					//draw bg
+					if (backgroundReady){
+						ctx.drawImage(backgroundImage[0], 0, 0, canvas.width, canvas.height);
+					}
+					
+					//play button
+					play.style.left=40 + 'px';
+					play.innerHTML="PLAY";
+					//play.style.backgroundImage="url('http://opengameart.org/sites/default/files/styles/medium/public/dialog-short.png')";
+					//play.style.backgroundSize= "px px";
+					play.onmouseover= function() {
+						playOver=true;
+					}
+					play.onmouseout=function(){
+						playOver=false;
+					}
+					if(playOver){
+						play.style.top=canvas.height*.2-(48/2)+(36-12)/2 +'px';
+						play.style.fontSize="48pt";
+						play.style.fontWeight="900";
+						colorVar=setInterval(colorPlay(), 1000);
+					}
+					else{
+						play.style.top=canvas.height*.2 +'px';
+						play.style.fontSize="36pt";
+						play.style.color="yellow";
+						cust.style.fontWeight="normal";
+						clearInterval(colorVar);
+						}
+					play.onclick = function() {
+						starting=false;
+						playing=true;
+					  
+						//remove divs
+						play.parentNode.removeChild(play);
+						cust.parentNode.removeChild(cust);
+						cred.parentNode.removeChild(cred);
+					}
+					var name;
+					//customize button
+					cust.style.left=40 + 'px';
+					cust.innerHTML="Customize <font size='5'>--coming soon</font>";
+					cust.onmouseover= function() {
+						custOver=true;
+					}
+					cust.onmouseout=function(){
+						custOver=false;
+					}
+					if(custOver){
+						cust.style.top=canvas.height*.35-(48/2)+(36-12)/2 +'px';
+						cust.style.fontSize="48pt";
+						cust.style.fontWeight="900";
+					}
+					else{
+						cust.style.top=canvas.height*.35 +'px';
+						cust.style.fontSize="36pt";
+						cust.style.color="yellow";
+						cust.style.fontWeight="normal";
+						}
+					cust.onclick = function() {
+					  //starting=false;
+					}
+					
+					//credits button
+					
+					cred.style.left=40 + 'px';
+					cred.innerHTML="Credits";
+					cred.onmouseover= function() {
+						credOver=true;
+					}
+					cred.onmouseout=function(){
+						credOver=false;
+					}
+					if(credOver){
+						cred.style.top=canvas.height*.5-(48/2)+(36-12)/2 +'px';
+						cred.style.fontSize="48pt";
+						cred.style.fontWeight="900";
+					}
+					else{
+						cred.style.top=canvas.height*.5 +'px';
+						cred.style.fontSize="36pt";
+						cred.style.color="yellow";
+						cred.style.fontWeight="normal";
+						}
+					cred.onclick = function() {
+					 starting=false;
+					 credScreen=true;
+					}
+				}
+				//--------game-over-screen--------
+				if(gameOver){
+				
+					if (backgroundReady){
+						ctx.drawImage(backgroundImage[1], 0, 0, canvas.width, canvas.height);
+					}
+					
+					//clipped planet drawing
+					if (AplanetsReady){
+						for(var i=0; i<nPlanets; i++){
+							if(planetA[i].x<=0){
+								planetA[i].x=0;
+								planetA[i].xVelocity*=-1;
+							}
+							if(planetA[i].x+planetA[i].mass*planetVisual>=canvas.width){
+								planetA[i].x=canvas.width-planetA[i].mass*planetVisual;
+								planetA[i].xVelocity*=-1;
+							}
+							if(planetA[i].y<=0){
+								planetA[i].y=0;
+								planetA[i].yVelocity*=-1;
+							}
+							if(planetA[i].y+planetA[i].mass*planetVisual>=canvas.height){
+								planetA[i].y=canvas.height-planetA[i].mass*planetVisual;
+								planetA[i].yVelocity*=-1;
+							}
+							ctx.drawImage(planetImages[planetA[i].imgID], planetA[i].x, planetA[i].y, planetA[i].mass*planetVisual, planetA[i].mass*planetVisual);
+						}
+					}
+					//planet movement
+					for(var i=0; i<nPlanets; i++){
+						planetA[i].x += planetA[i].xVelocity;
+						planetA[i].y += planetA[i].yVelocity;
+					}
+					
+					//gravitational physics
+						//planet-planet gravity
+					for(var a=0; a<nPlanets; a++){
+						for(var b=0; b<nPlanets; b++){
+							var xDist=(planetA[a].x+planetA[a].mass*planetVisual*.5)-(planetA[b].x+planetA[b].mass*planetVisual*.5);
+							var yDist=(planetA[a].y+planetA[a].mass*planetVisual*.5)-(planetA[b].y+planetA[b].mass*planetVisual*.5);
+							
+							var biggerMass;
+							if(planetA[a].mass>planetA[b].mass){
+								biggerMass=planetA[a].mass;
+							}
+							else{
+								biggerMass=planetA[b].mass;
+							}
+							
+							if( (xDist < biggerMass * 2 && xDist > 0) && ((yDist < biggerMass && yDist > 0)||(yDist > biggerMass * -1 && yDist < 0)) ){
+								if(planetA[a].mass<planetA[b].mass){
+									planetA[a].xG=(planetA[b].mass/(planetA[a].mass)*-.05);
+								}
+								else if(planetA[a].mass>planetA[b].mass){
+									planetA[b].xG=((planetA[a].mass)/(planetA[b].mass)*.05);
+								}
+							}
+							else if(xDist > biggerMass * -2 && xDist < 0 && ((yDist < biggerMass && yDist > 0)||(yDist > biggerMass * -1 && yDist < 0)) ){
+								if(planetA[a].mass<planetA[b].mass){
+									planetA[a].xG=(planetA[b].mass/(planetA[a].mass)*.05);
+								}
+								else if(planetA[a].mass>planetA[b].mass){
+									planetA[b].xG=((planetA[a].mass)/(planetA[b].mass)*-.05);
+								}
+							}
+							else{
+								planetA[a].xG=0;
+								planetA[b].xG=0;
+							};
+							
+							if(yDist < biggerMass * 1.5 && yDist > 0 && ((xDist < biggerMass && xDist > 0)||(xDist > biggerMass * -1 && xDist < 0)) ){
+								if(planetA[a].mass<planetA[b].mass){
+									planetA[a].yG=(planetA[b].mass/(planetA[a].mass)*-.05);
+								}
+								else if(planetA[a].mass>planetA[b].mass){
+									planetA[b].yG=((planetA[a].mass)/(planetA[b].mass)*.05);
+								}
+							}
+							else if(yDist > biggerMass * -1.5 && yDist < 0 && ((xDist < biggerMass && xDist > 0)||(xDist > biggerMass * -1 && xDist < 0)) ){
+								if(planetA[a].mass<planetA[b].mass){
+									planetA[a].yG=(planetA[b].mass/(planetA[a].mass)*.05);
+								}
+								else if(planetA[a].mass>planetA[b].mass){
+									planetA[b].yG=((planetA[a].mass)/(planetA[b].mass)*-.05);
+								}
+							}
+							else{
+								planetA[a].yG=0;
+								planetA[b].yG=0;
+							};
+							
+							planetA[a].xVelocity += planetA[a].xG;
+							planetA[a].yVelocity += planetA[a].yG;
+							planetA[b].xVelocity += planetA[b].xG;
+							planetA[b].yVelocity += planetA[b].yG;
+						}
+					}
+					
+					//mass text output
+					var leastGas=0;
+					for(var i=0; i<nPlanets-1; i++){
+						if(planetA[leastGas].mass>planetA[i+1].mass && planetA[i+1].exists || !planetA[leastGas].exists){
+							leastGas=i+1;
+						}
+					}
+
+					var mostGas=0;
+					for(var i=0; i<nPlanets-1; i++){
+						if(planetA[mostGas].mass<=planetA[i+1].mass && planetA[i+1].exists || !planetA[mostGas].exists){
+							mostGas=i+1;
+						}
+					}
+					
+					var smallDiv = document.getElementById('smallest');
+					if(leastGas!=mostGas){
+						smallDiv.innerHTML=planetA[leastGas].mass;
+						smallDiv.style.left = planetA[leastGas].x+(planetA[leastGas].mass*planetVisual)+'px';
+						smallDiv.style.top = planetA[leastGas].y+'px';
+						smallDiv.style.color="white";
+					}
+					else{
+						smallDiv.innerHTML=planetA[mostGas].mass;
+						smallDiv.style.left = planetA[mostGas].x+(planetA[leastGas].mass*planetVisual)+'px';
+						smallDiv.style.top = planetA[mostGas].y+'px';
+						smallDiv.style.color="orange";
+					}
+					
+					var largeDiv = document.getElementById('largest');
+						largeDiv.innerHTML=planetA[mostGas].mass;
+						largeDiv.style.left = planetA[mostGas].x+(planetA[leastGas].mass*planetVisual)+'px';
+						largeDiv.style.top = planetA[mostGas].y+'px';
+						largeDiv.style.color="orange";
+					
+					if(sunDivHasReset[deaths-1]==false){
+						sunDiv[deaths-1].parentNode.removeChild(sunDiv[deaths-1]);
+						sunDivHasReset[deaths-1]=true;
+					}
+					
+					//planet-planet collision
+					for(var a=0; a<nPlanets; a++){
+						for(var b=0; b<nPlanets; b++)
+						{
+							if(a!=b){
+								if(planetA[a].x<=planetA[b].x+planetA[b].mass*planetVisual &&
+									planetA[a].x+planetA[a].mass*planetVisual>=planetA[b].x &&
+									planetA[a].y<=planetA[b].y+planetA[b].mass*planetVisual &&
+									planetA[a].y+planetA[a].mass*planetVisual>=planetA[b].y)
+								{
+									if (planetA[a].mass<=planetA[b].mass && planetA[a].exists)
+									{
+										planetA[a].mass-=3;
+										planetA[b].mass+=1;
+										planetA[b].x-=.5;
+										planetA[b].y-=.5;
+									}
+									if (planetA[b].mass<=planetA[a].mass && planetA[b].exists)
+									{
+										planetA[a].mass+=1;
+										planetA[b].mass-=3;
+										planetA[a].x-=.5;
+										planetA[a].y-=.5;
+									}
+									if (planetA[a].mass<=0 && planetA[a].exists)
+									{
+										planetA[a].mass=0;
+										planetA[a].exists=false;
+									}
+									if (planetA[b].mass<=0 && planetA[b].exists)
+									{
+										planetA[b].mass=0;
+										planetA[b].exists=false;
+									}
+								}
+							}
+						}
+					}
+					
+					//score and level divs
+					var levelDiv = document.getElementById("level");
+					levelDiv.innerHTML="Level "+level;
+					levelDiv.style.left=canvas.width*.9 + 'px';
+					levelDiv.style.top=15 + 'px';
+					levelDiv.style.color="lightblue";
+					levelDiv.style.fontSize="14pt";
+					
+					var name="Guest";
+					
+					topper+=3.5;
+					if(topper>=canvas.height*.35){
+						topper=canvas.height*.35;
+						levelDiv.innerHTML="Level: "+level+"<br><br><font size='5' color='red'>"+name+", your total score this session was: "+score*level+"</font><br><font size='4' color ='red'>press 'R' to restart</font>";
+						levelDiv.style.left=canvas.width*.3 + 'px';
+						levelDiv.style.top=canvas.height*.45 + 'px';
+						levelDiv.style.color="lightblue";
+						levelDiv.style.fontSize="24pt";
+					}
+					var scoreDiv = document.getElementById("score");
+					scoreDiv.innerHTML="Gas Absorbed: "+score;
+					scoreDiv.style.left=canvas.width*.3 + 'px';
+					scoreDiv.style.top=topper + 'px';
+					scoreDiv.style.color="lightblue";
+					scoreDiv.style.fontSize="24pt";
+					
+					
+					//restart
+					if(newTouch){
+					
+						for(i=0; i<nPlanets; i++){
+							planetA[i].exists=false;
+						}
+						
+						topper=0;
+						reset(1);
+						gameOver=false;
+						playing=true;
+						newTouch=false;
+					}
+					
+				}
+				//--------credits-screen----------
+				if(credScreen){
+					
+					//draw bg
+					ctx.drawImage(credBG, 0, 0, canvas.width, canvas.height);
+				
+					//move divs
+					play.style.left=canvas.width*.1 + 'px';
+					play.style.top=canvas.height*.1 +'px';
+					play.style.fontSize="17pt";
+					play.style.color="black";
+					play.innerHTML="<b><h1>CREDITS</h1></b><br><br><br><font size='5'><b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;A special thanks to all those who<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;helped make this game possible:</b></font>";
+					play.onclick=function(){
+					};
+					
+					cust.style.left=canvas.width*.55 + 'px';
+					cust.style.top=canvas.height*.25 +'px';
+					cust.style.fontSize="14pt";
+					cust.style.color="black";
+					cust.innerHTML="<b><font size='5'>Sun art by MysticMike</font></b><br> http://opengameart.org/users/mysticmike<br><br><b><font size='5'>Space art by Rawdanitsu</font></b><br>http://opengameart.org/users/rawdanitsu<br><br><b><font size='5'>Planet art by GM_Shaber</font></b><br>http://opengameart.org/users/shaber<br><br><b><font size='5'>Credit screen by Iron Star Media</font></b><br>http://www.ironstarmedia.co.uk";
+					cust.onclick=function(){
+					};
+					
+					cred.style.left=canvas.width*.7 + 'px';
+					cred.style.top=canvas.height*.85 +'px';
+					cred.style.fontSize="36pt";
+					cred.style.color="black";
+					cred.style.fontWeight="normal";
+					cred.innerHTML="&#9664 Go Back";
+					cred.onclick=function(){
+						credScreen=false;
+						starting=true;
+					}
+					cred.onmouseover=function(){
+						credOver=true;
+					}
+					cred.onmouseout=function(){
+						credOver=false;
+					}
+					if(credOver){
+						cred.style.fontWeight="bold";
+						cred.style.fontSize="44pt";
+						cred.style.top=canvas.height*.85-(44-36)+'px';
+						cred.style.left=canvas.width*.65 + 'px';
+					}
+				}
+			}
+
+			function reset(newLevel){
+				
+				level=newLevel;
+				nPlanets=level+1;
+				if(newLevel==1){
+					score=0;
+				}
+				justDied=true;
+				
+				spaceship = {
+					x: (canvas.width*.5)-(100*.5),
+					y: (canvas.height*.5)-(100*.5),
+					xVelocity:0,
+					yVelocity:0,
+					xG:0,
+					yG:0,
+					mass:100,
+					engine: .3,
+					exists: true
+				};
+				//sun-planet spawn protection
+				for(i=0; i<nPlanets; i++){
+					planetA[i]={
+						xG: 0,
+						yG: 0,
+						xVelocity: (Math.random()*7)-3,
+						yVelocity: (Math.random()*7)-3,
+						x: Math.random()*(canvas.width-planetSize)*.97,
+						y: Math.random()*(canvas.height-planetSize)*.97,
+						mass: Math.floor(Math.random()*planetMulti*(i%5)+planetSize),
+						exists: true,
+						imgID : Math.floor((Math.random()*nPlanetPics*101)%nPlanetPics)
+					};
+					if(planetA[i].x<=spaceship.x+(spaceship.mass*1.2) &&
+						planetA[i].x+planetA[i].mass*planetVisual>=spaceship.x&&
+						planetA[i].y<=spaceship.y+(spaceship.mass*1.2) &&
+						planetA[i].y+planetA[i].mass*planetVisual>=spaceship.y){
+							var IO = (Math.random()*101)%2;
+							if(IO==0){
+								planetA[i].x+=spaceship.mass * 2 + (Math.random()*1001)+resetBuffer;
+							}
+							else{
+								planetA[i].x-=spaceship.mass * 2 + (Math.random()*1001)+resetBuffer;
+							}
+						}
+				};
+				//planet-planet spawn protection
+				for(var a=0; a<nPlanets; a++){
+					for(var b=0; b<nPlanets; b++)
+					{
+						if(a!=b){
+							if(planetA[a].x<=planetA[b].x+planetA[b].mass*planetVisual &&
+								planetA[a].x+planetA[a].mass*planetVisual>=planetA[b].x &&
+								planetA[a].y<=planetA[b].y+planetA[b].mass*planetVisual &&
+								planetA[a].y+planetA[a].mass*planetVisual>=planetA[b].y)
+							{
+								var OI = (Math.random()*101)%2;
+								if(OI==0){
+									planetA[b].x+=planetA[a].mass * 2 + (Math.random()*1001)+resetBuffer;
+								}
+								else{
+									planetA[b].x-=planetA[a].mass * 2 + (Math.random()*1001)+resetBuffer;
+								}
+							}
+						}
+					}
+				}
+			}
+
+			setInterval(render, 30);
+		}
+					
+		</script
+		
+	</body>
+</html>
