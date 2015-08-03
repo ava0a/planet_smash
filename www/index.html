@@ -149,6 +149,16 @@
 
 			var sunDiv = new Array();
 			var sunDivHasReset = new Array();
+			
+			var speedAspect=0.000375;
+			
+			var smallerSide;
+			if(canvas.height>canvas.width){
+				smallerSide=canvas.width;
+			}
+			else{
+				smallerSide=canvas.height;
+			}
 
 			//load bg images
 			var backgroundImage = new Array();
@@ -454,7 +464,7 @@
 					spaceship.xVelocity+=spaceship.xG;
 					spaceship.yVelocity+=spaceship.yG;
 					
-					var sunSpeedCap = 25;
+					var sunSpeedCap = speedAspect*smallerSide*83;
 					var friction=.03;
 					
 					if(spaceship.xVelocity>=sunSpeedCap){
@@ -1027,7 +1037,7 @@
 					xG:0,
 					yG:0,
 					mass:100,
-					engine: .3,
+					engine: smallerSide*speedAspect,
 					exists: true
 				};
 				//sun-planet spawn protection
